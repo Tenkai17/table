@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>table -- 字符串拼接</title>
+    <style>
+        table[fixed="true"]{border-collapse: collapse; border-spacing: 0; table-layout: fixed;}
+        table[fixed="true"] td{word-break: break-word;}
+
+        .table{width:100%; background: #fff; margin: 0 auto;}
+        .table th,td{border: 1px solid #e1e6eb; text-align: center; padding: 8px;}
+        .table thead tr{height: 50px;}
+        .table tbody tr{height: 45px;}
+        .table tr:nth-child(even) {background: #edf1f554;}
+
+        .moreBtn{border: 1px solid #e1e6eb; height: 60px; line-height: 60px; text-align: center; color: #999;  margin: 20px auto 0;}
+    </style>
+</head>
+<body>
+
+    <table class="table" fixed="true">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th width="90">PM10</th>
+                <th width="90">PM2.5</th>
+                <th width="90">SO2</th>
+                <th width="70">操作</th>
+            </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tbody id="tbodyMain" style="display: none;">
+            <tr class="list__click">
+                <td>{$id}</td>
+                <td>{$pm10}</td>
+                <td>{$pm25}</td>
+                <td>{$so2}</td>
+                <td><span class="main-showBtn" data-id="{$id}">[详细]</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    
+    <script src="skin/js/cookie.js"></script>
+    <script type="text/html" id="temp">
+        <tr>
+            <td>{$id}</td>
+            <td>{$pm10}</td>
+            <td>{$pm25}</td>
+            <td>{$so2}</td>
+            <td><span class="main-showBtn" data-id="{$id}">[详细]</span></td>
+        </tr>
+    </script>
+    <script>
+        var ajaxModule = function (){
+            var data = function(opt){
+                opt = opt || {};
+                opt.method = opt.method.toUpperCase() || 'POST';
+                opt.url = opt.url || '';
+                opt.token = opt.token || '';
+                opt.type = opt.type || 'HTML';
+                opt.request = opt.request || 'x-www-form-urlencoded';
+                opt.async = opt.async || true;
+                opt.data = opt.data || null;
+                opt.success = opt.success || function () {};
+                opt.error = opt.error || function () {};
+                var xmlHttp = null;
+                if (XMLHttpRequest) {
+                    xmlHttp = new XMLHttpRequest();
+                }else{
+                    xmlHttp = new ActiveXObject('Microsoft.XMLHTTP');
+                }
+
+                var postData = "";
+                switch (opt.request) {
+                    case 'json':
+                        postData = JSON.stringify(opt.data);
+                        break;
+                    default:
+                        var params = [];
+                        for (var key in opt.data){
+                            if(key == "all"){
+                                var array, i, arrayLength;
+                                array = opt.data[key].split(",");
+                                arrayLength = array.length;
+                                for(i=0;i<arrayLength;i++){
+                                    params.push(array[i]);
+                                }
+                            }else{
+                                params.push(key + '=' + opt.data[key]);
+                            }
+                        }
+                        postData = params.join('&');
+                }
+
+                switch (opt.method.toUpperCase()) {
+                    case 'POST':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'DELETE':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'PUT':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'GET':
+                        xmlHttp.open(opt.method, opt.url + '?' + postData, opt.async);
+
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+                        xmlHttp.send(null);
+                        break;
+                }
+                xmlHttp.onreadystatechange = function () {
+                    if(xmlHttp.status == 200){
+                        if(xmlHttp.readyState == 4){
+                            switch (opt.type) {
+                                case 'JSON':
+                                    opt.success(eval('(' + xmlHttp.responseText + ')'));
+                                    break;
+                                default:
+                                    opt.success(xmlHttp.responseText);
+                            }
+                        }
+                    }else{
+                        opt.error();
+                    }
+                };
+            };
+            return {
+                data : data
+            };
+        };
+        var filterModule = function (){
+
+            // 空值
+            var isEmpty = function(val) {
+                if(val === null || typeof(val) === "undefined" || val === "" || val.length === 0) return true;
+                return false;
+            };
+
+            // 非空
+            var isNotEmpty = function(val) {
+                return !this.isEmpty(val);
+            };
+
+            // 过滤空值
+            var empty = function(val, format){
+                format = format ? format : "--";
+                val = (this.isEmpty(val) === false) ? val : format;
+                return val;
+            };
+
+            return {
+                isEmpty: isEmpty,
+                isNotEmpty: isNotEmpty,
+                empty : empty
+            };
+        };
+
+
+        // getHtmlMain(70~150): 将html声明在dom中
+        var getHtmlMain = function (data) {
+            console.time("getHtmlMain封装函数拼接时间(70~150)");
+
+            var json = null, mapObj,
+                oTbody = document.getElementById("tbodyMain"),
+                htmlArr = [],
+                html = oTbody.innerHTML;
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                mapObj = {
+                    "{$id}": filterModule().empty(json.id),
+                    "{$pm10}": filterModule().empty(json.pm10),
+                    "{$pm25}": filterModule().empty(json.pm25),
+                    "{$so2}": filterModule().empty(json.so2)
+                };
+
+                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
+                    return mapObj[matched];
+                });
+            }
+            oTbody.innerHTML = htmlArr.join("");
+            oTbody.removeAttribute("style");
+            console.timeEnd("getHtmlMain封装函数拼接时间(70~150)");
+        };
+
+        // 拼接时间（35~55）：replace(regex , value)
+        var getHtmlOne = function (data) {
+            console.time("getHtmlOne拼接时间（35~55）");
+            var json = null, htmlArray = [],
+                oTbody = document.getElementById("tbody"),
+                html = "<tr class='list__click'>"
+                        + "<td>{id}</td>"
+                        + "<td>{pm10}</td>"
+                        + "<td>{pm25}</td>"
+                        + "<td>{so2}</td>"
+                        + "<td><span class='main-showBtn' data-id='{id}'>[详细]</span></td>"
+                        + "</tr>";
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                htmlArray[a] = html.replace(/{id}/g, filterModule().empty(json.id))
+                    .replace("{pm10}", filterModule().empty(json.pm10))
+                    .replace("{pm25}", filterModule().empty(json.pm25))
+                    .replace("{so2}", filterModule().empty(json.so2));
+            }
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlOne拼接时间（35~55）");
+        };
+
+        //拼接时间（40~55）: replace(regex , fn)
+        var getHtmlTwo = function (data) {
+            console.time("getHtmlTwo拼接时间（40~55）");
+
+            var json = null, htmlArray = [], mapObj,
+                oTbody = document.getElementById("tbody"),
+                html = "<tr class='list__click'>"
+                    + "<td>{$id}</td>"
+                    + "<td>{$pm10}</td>"
+                    + "<td>{$pm25}</td>"
+                    + "<td>{$so2}</td>"
+                    + "<td><span class='main-showBtn' data-id='{$id}'>[详细]</span></td>"
+                    + "</tr>";
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                mapObj = {
+                    "{$id}": filterModule().empty(json.id),
+                    "{$pm10}": filterModule().empty(json.pm10),
+                    "{$pm25}": filterModule().empty(json.pm25),
+                    "{$so2}": filterModule().empty(json.so2)
+                };
+
+                htmlArray[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
+                    return mapObj[matched];
+                });
+            }
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlTwo拼接时间（40~55）");
+        };
+
+        //拼接时间(40~60): 封装replaceAll()
+        var getHtmlTwoPackage = function (data) {
+            console.time("getHtmlTwo封装函数拼接时间(98~110)");
+
+            // replace函数封装
+            //var regex =/\{(\d+)\}/g;
+            function replaceAll(str, mapObj){
+                return str.replace(/{\$([^}]+)?}/g, function(matched){
+                    return mapObj[matched];
+                });
+            }
+
+            // 主要
+            var json = null, htmlArray = [], obj,
+                oTbody = document.getElementById("tbody"),
+                html = "<tr class='list__click'>"
+                    + "<td>{$id}</td>"
+                    + "<td>{$pm10}</td>"
+                    + "<td>{$pm25}</td>"
+                    + "<td>{$so2}</td>"
+                    + "<td><span class='main-showBtn' data-id='{$id}'>[详细]</span></td>"
+                    + "</tr>";
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                obj = {
+                    "{$id}": filterModule().empty(json.id),
+                    "{$pm10}": filterModule().empty(json.pm10),
+                    "{$pm25}": filterModule().empty(json.pm25),
+                    "{$so2}": filterModule().empty(json.so2)
+                };
+                htmlArray[a] = replaceAll(html, obj);
+            }
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlTwo封装函数拼接时间(40~60)");
+        };
+
+        //拼接时间(98~110): 通过split().join()
+        var getHtmlThree = function (data) {
+            console.time("getHtmlThree拼接时间(98~110)");
+            var oTbody = document.getElementById("tbody"),
+                oTemp = document.getElementById("temp"),
+                json = null,
+                htmlArray = [],
+                html;
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                html = oTemp.innerHTML.split("{$id}").join(filterModule().empty(json.id));
+                html = html.split("{$pm10}").join(filterModule().empty(json.pm10));
+                html = html.split("{$pm25}").join(filterModule().empty(json.pm25));
+                html = html.split("{$so2}").join(filterModule().empty(json.so2));
+                html = html.split("{$id}").join(filterModule().empty(json.id));
+
+                htmlArray[a] = html;
+            }
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlThree拼接时间(98~110)");
+        };
+
+        //拼接时间(55~65): 通过createElement() appendChild()
+        var getHtmlFour = function (data) {
+            console.time("getHtmlFour拼接时间(55~65)");
+            var oTbody = document.getElementById("tbody"),
+                json = null,
+                tr, td, b;
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                tr = document.createElement("tr");
+                for (b = 0; b < 5; b++) {
+                    td = document.createElement("td");
+                    if(b === 0)td.textContent = filterModule().empty(json.id);
+                    if(b === 1)td.textContent = filterModule().empty(json.pm10);
+                    if(b === 2)td.textContent = filterModule().empty(json.pm25);
+                    if(b === 3)td.textContent = filterModule().empty(json.so2);
+                    if(b === 4)td.innerHTML = '<span class="main-showBtn" data-id="'+ json.id +'">[详细]</span>';
+                    tr.appendChild(td);
+                }
+                oTbody.appendChild(tr);
+            }
+            console.timeEnd("getHtmlFour拼接时间(55~65)");
+        };
+
+        // 拼接时间（35~55）：通过push()
+        var getHtmlFive = function (data) {
+            console.time("getHtmlOne拼接时间（35~55）");
+            var json = null, htmlArray = [],
+                oTbody = document.getElementById("tbody");
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                htmlArray.push("<tr class='list__click'>");
+                htmlArray.push("<td>"+ filterModule().empty(json.id) +"</td>");
+                htmlArray.push("<td>"+ filterModule().empty(json.pm10) +"</td>");
+                htmlArray.push("<td>"+ filterModule().empty(json.pm25) +"</td>");
+                htmlArray.push("<td>"+ filterModule().empty(json.so2) +"</td>");
+                htmlArray.push("<td><span class='main-showBtn' data-id='"+ filterModule().empty(json.id) +"'>[详细]</span></td>");
+                htmlArray.push("</tr>");
+            }
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlOne拼接时间（35~55）");
+        };
+
+        // 拼接时间（45~60）：通过传参的方式赋值
+        var getHtmlSix = function (data) {
+            console.time("getHtmlSix封装函数拼接时间(45~60)");
+
+            var htmlArray = [], json = null,
+                oTbody = document.getElementById("tbody");
+
+            var html = "<tr class='list__click'>"
+                + "<td>{0}</td>"
+                + "<td>{1}</td>"
+                + "<td>{2}</td>"
+                + "<td>{3}</td>"
+                + "<td><span class='main-showBtn' data-id='{0}'>[详细]</span></td>"
+                + "</tr>";
+
+            function stringFormat(str){
+                var params = [].slice.call(arguments,1);    //第一个参数，即html
+                var regex =/\{(\d+)\}/g;
+                str = str.replace(regex,function(){
+                    var index = arguments[1];               //除第一个参数(即 除html)，即剩下的值
+                    return params[index];
+                });
+                return str;
+            }
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+                htmlArray[a] = stringFormat(html, filterModule().empty(json.id)
+                    ,filterModule().empty(json.pm10)
+                    ,filterModule().empty(json.pm25)
+                    ,filterModule().empty(json.so2)
+                );
+            }
+
+            oTbody.innerHTML = htmlArray.join("");
+            console.timeEnd("getHtmlSix封装函数拼接时间(45~60)");
+        };
+
+        // 数据获取
+        var getData = function (province, city, area, num, pageSize) {
+            ajaxModule().data({
+                method: 'GET',
+                //url: "skin/json/airData--airQualityPageQuery.json",
+                url: "skin/json/many--airData--airQualityPageQuery.json",
+                type: 'JSON',
+                data: {
+                    provinceId: province,
+                    cityId: city,
+                    countyId: area,
+                    pageNum: num,
+                    pageSize: pageSize
+                },
+                success: function (data) {
+                    var list = data.content.list;
+                    if(list){
+                        // 调用数据处理
+                        getHtmlMain(list);
+
+                        //getHtmlOne(list);
+                        // OR
+                        //getHtmlTwo(list);
+                        // OR
+                        //getHtmlTwoPackage(list);
+                        // OR
+                        //getHtmlThree(list);
+                        // OR
+                        //getHtmlFour(list);
+                        // OR
+                        //getHtmlFive(list);
+                    }else{
+                        return false;
+                    }
+                },
+                error: function () {
+                    return false;
+                }
+            });
+        };
+
+        // 數據加載
+        getData("", "", "", 1, 10);
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>table -- 元素追加</title>
+    <style>
+        table[fixed="true"]{border-collapse: collapse; border-spacing: 0; table-layout: fixed;}
+        table[fixed="true"] td{word-break: break-word;}
+
+        .table{width:100%; background: #fff; margin: 0 auto;}
+        .table th,td{border: 1px solid #e1e6eb; text-align: center; padding: 8px;}
+        .table thead tr{height: 50px;}
+        .table tbody tr{height: 45px;}
+        .table tr:nth-child(even) {background: #edf1f554;}
+
+        .moreBtn{border: 1px solid #e1e6eb; height: 60px; line-height: 60px; text-align: center; color: #999;  margin: 20px auto 0;}
+    </style>
+</head>
+<body>
+
+    <table class="table" fixed="true">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th width="90">PM10</th>
+                <th width="90">PM2.5</th>
+                <th width="90">SO2</th>
+                <th width="70">操作</th>
+            </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+    <div id="moreBtn" class="moreBtn"></div>
+
+
+    <script src="skin/js/cookie.js"></script>
+    <script type="text/html" id="temp">
+        <td>{$id}</td>
+        <td>{$pm10}</td>
+        <td>{$pm25}</td>
+        <td>{$so2}</td>
+        <td><span class="main-showBtn" data-id="{$id}">[详细]</span></td>
+    </script>
+    <script>
+        var ajaxModule = function (){
+            var data = function(opt){
+                opt = opt || {};
+                opt.method = opt.method.toUpperCase() || 'POST';
+                opt.url = opt.url || '';
+                opt.token = opt.token || '';
+                opt.type = opt.type || 'HTML';
+                opt.request = opt.request || 'x-www-form-urlencoded';
+                opt.async = opt.async || true;
+                opt.data = opt.data || null;
+                opt.success = opt.success || function () {};
+                opt.error = opt.error || function () {};
+                var xmlHttp = null;
+                if (XMLHttpRequest) {
+                    xmlHttp = new XMLHttpRequest();
+                }else{
+                    xmlHttp = new ActiveXObject('Microsoft.XMLHTTP');
+                }
+
+                var postData = "";
+                switch (opt.request) {
+                    case 'json':
+                        postData = JSON.stringify(opt.data);
+                        break;
+                    default:
+                        var params = [];
+                        for (var key in opt.data){
+                            if(key == "all"){
+                                var array, i, arrayLength;
+                                array = opt.data[key].split(",");
+                                arrayLength = array.length;
+                                for(i=0;i<arrayLength;i++){
+                                    params.push(array[i]);
+                                }
+                            }else{
+                                params.push(key + '=' + opt.data[key]);
+                            }
+                        }
+                        postData = params.join('&');
+                }
+
+                switch (opt.method.toUpperCase()) {
+                    case 'POST':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'DELETE':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'PUT':
+                        xmlHttp.open(opt.method, opt.url, opt.async, opt.request);
+                        xmlHttp.setRequestHeader('Content-Type', 'application/'+opt.request+';charset=utf-8');
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+
+                        xmlHttp.send(postData);
+                        break;
+                    case 'GET':
+                        xmlHttp.open(opt.method, opt.url + '?' + postData, opt.async);
+
+                        xmlHttp.setRequestHeader('Authorization', 'bearer '+Cookies.get('token'));
+                        xmlHttp.send(null);
+                        break;
+                }
+                xmlHttp.onreadystatechange = function () {
+                    if(xmlHttp.status == 200){
+                        if(xmlHttp.readyState == 4){
+                            switch (opt.type) {
+                                case 'JSON':
+                                    opt.success(eval('(' + xmlHttp.responseText + ')'));
+                                    break;
+                                default:
+                                    opt.success(xmlHttp.responseText);
+                            }
+                        }
+                    }else{
+                        opt.error();
+                    }
+                };
+            };
+            return {
+                data : data
+            };
+        };
+        var filterModule = function (){
+
+            // 空值
+            var isEmpty = function(val) {
+                if(val === null || typeof(val) === "undefined" || val === "" || val.length === 0) return true;
+                return false;
+            };
+
+            // 非空
+            var isNotEmpty = function(val) {
+                return !this.isEmpty(val);
+            };
+
+            // 过滤空值
+            var empty = function(val, format){
+                format = format ? format : "--";
+                val = (this.isEmpty(val) === false) ? val : format;
+                return val;
+            };
+
+            return {
+                isEmpty: isEmpty,
+                isNotEmpty: isNotEmpty,
+                empty : empty
+            };
+        };
+
+        // 拼接时间（62~75）
+        var getHtmlOne = function (data) {
+            console.time("getHtmlOne拼接时间（62~75）");
+            var json = null, tr,
+                oTbody = document.getElementById("tbody"),
+                html = "<td>{id}</td>" +
+                        "<td>{pm10}</td>" +
+                        "<td>{pm25}</td>" +
+                        "<td>{so2}</td>";
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                tr = document.createElement("tr");
+                tr.innerHTML = html.replace(/{id}/g, filterModule().empty(json.id)).
+                        replace("{pm10}", filterModule().empty(json.pm10)).
+                        replace("{pm25}", filterModule().empty(json.pm25)).
+                        replace("{so2}", filterModule().empty(json.so2));
+                oTbody.appendChild(tr);
+            }
+            console.timeEnd("getHtmlOne拼接时间（62~75）");
+        };
+
+        //拼接时间（75~85）
+        var getHtmlTwo = function (data) {
+            console.time("getHtmlTwo拼接时间（75~85）");
+            var json = null, tr, mapObj,
+                oTbody = document.getElementById("tbody"),
+                html = "<td>{$id}</td>" +
+                        "<td>{$pm10}</td>" +
+                        "<td>{$pm25}</td>" +
+                        "<td>{$so2}</td>" +
+                        "<td><span class='main-showBtn' data-id='{$id}'>[详细]</span></td>";
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                tr = document.createElement("tr");
+                mapObj = {
+                    "{$id}": filterModule().empty(json.id),
+                    "{$pm10}": filterModule().empty(json.pm10),
+                    "{$pm25}": filterModule().empty(json.pm25),
+                    "{$so2}": filterModule().empty(json.so2)
+                };
+                tr.innerHTML = html.replace(/{\$id}|{\$pm10}|{\$pm25}|{\$so2}/g, function(matched){
+                    return mapObj[matched];
+                });
+
+                oTbody.appendChild(tr);
+            }
+            console.timeEnd("getHtmlTwo拼接时间（75~85）");
+        };
+
+        //拼接时间(98~110)
+        var getHtmlThree = function (data) {
+            console.time("getHtmlThree拼接时间(98~110)");
+            var oTbody = document.getElementById("tbody"),
+                oTemp = document.getElementById("temp"),
+                json = null,
+                tr,
+                html;
+
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+                tr = document.createElement("tr");
+
+                html = oTemp.innerHTML.split("{$id}").join(filterModule().empty(json.id));
+                html = html.split("{$pm10}").join(filterModule().empty(json.pm10));
+                html = html.split("{$pm25}").join(filterModule().empty(json.pm25));
+                html = html.split("{$so2}").join(filterModule().empty(json.so2));
+                html = html.split("{$id}").join(filterModule().empty(json.id));
+
+                tr.innerHTML = html;
+                oTbody.appendChild(tr);
+            }
+            console.timeEnd("getHtmlThree拼接时间(98~110)");
+        };
+
+        //拼接时间(55~65)
+        var getHtmlFour = function (data) {
+            console.time("getHtmlFour拼接时间(55~65)");
+            var oTbody = document.getElementById("tbody"),
+                json = null,
+                tr, td, b;
+            for (var a = 0, len = data.length; a < len; a++) {
+                json = data[a];
+
+                tr = document.createElement("tr");
+                for (b = 0; b < 5; b++) {
+                    td = document.createElement("td");
+                    if(b === 0)td.textContent = filterModule().empty(json.id);
+                    if(b === 1)td.textContent = filterModule().empty(json.pm10);
+                    if(b === 2)td.textContent = filterModule().empty(json.pm25);
+                    if(b === 3)td.textContent = filterModule().empty(json.so2);
+                    if(b === 4)td.innerHTML = '<span class="main-showBtn" data-id="'+ json.id +'">[详细]</span>';
+                    tr.appendChild(td);
+                }
+                oTbody.appendChild(tr);
+            }
+            console.timeEnd("getHtmlFour拼接时间(55~65)");
+        };
+
+        // 数据获取
+        var getData = function (province, city, area, num, pageSize) {
+            var oTbody = document.getElementById("tbody"),
+                moreBtn = document.getElementById("moreBtn");
+            if(num && num === 1){oTbody.innerHTML = "";}
+            moreBtn.innerText = "加载更多";
+
+            ajaxModule().data({
+                method: 'GET',
+                url: "skin/json/airData--airQualityPageQuery.json",
+                type: 'JSON',
+                data: {
+                    provinceId: province,
+                    cityId: city,
+                    countyId: area,
+                    pageNum: num,
+                    pageSize: pageSize
+                },
+                success: function (data) {
+                    var list = data.content.list;
+                    if(list){
+                        // 调用数据处理
+                        //getHtmlOne(list);
+                        // OR
+                        //getHtmlTwo(list);
+                        // OR
+                        //getHtmlThree(list);
+                        // OR
+                        getHtmlFour(list);
+
+
+                        //下拉加载更多
+                        if(num+1 > data.content.pages){
+                            moreBtn.innerText = "没有更多";
+                        }
+                        moreBtn.onclick = function () {
+                            if(num+1 > data.content.pages){
+                                moreBtn.innerText = "没有更多";
+                            }else{
+                                num += 1;
+                                getData(province, city, area, num, 10);
+                            }
+                        }
+
+                    }else{
+                        return false;
+                    }
+                },
+                error: function () {
+                    return false;
+                }
+            });
+        };
+
+
+
+        // 數據加載
+        getData("", "", "", 1, 10);
+    </script>
+
+</body>
+</html>
