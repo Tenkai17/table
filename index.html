@@ -174,15 +174,16 @@
         var getHtmlMain = function (data) {
             console.time("getHtmlMain封装函数拼接时间(70~150)");
 
-            var json = null, mapObj,
-                oTbody = document.getElementById("tbodyMain"),
+            var oTbody = document.getElementById("tbodyMain"),
+                json = null,
+                htmlObj = {},
                 htmlArr = [],
                 html = oTbody.innerHTML;
 
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
-                mapObj = {
+                htmlObj = {
                     "{$id}": filterModule().empty(json.id),
                     "{$pm10}": filterModule().empty(json.pm10),
                     "{$pm25}": filterModule().empty(json.pm25),
@@ -190,7 +191,7 @@
                 };
 
                 htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
-                    return mapObj[matched];
+                    return htmlObj[matched];
                 });
             }
             oTbody.innerHTML = htmlArr.join("");
