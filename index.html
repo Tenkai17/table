@@ -12,13 +12,11 @@
         .table thead tr{height: 50px;}
         .table tbody tr{height: 45px;}
         .table tr:nth-child(even) {background: #edf1f554;}
-
-        .moreBtn{border: 1px solid #e1e6eb; height: 60px; line-height: 60px; text-align: center; color: #999;  margin: 20px auto 0;}
     </style>
 </head>
 <body>
 
-    <table class="table" fixed="true">
+    <table id="table" class="table" fixed="true">
         <thead>
             <tr>
                 <th>ID</th>
@@ -28,8 +26,8 @@
                 <th width="70">操作</th>
             </tr>
         </thead>
-        <tbody id="tbody"></tbody>
-        <tbody id="tbodyMain" style="display: none;">
+        <!--one-->
+        <tbody style="display: none;">
             <tr class="list__click">
                 <td>{$id}</td>
                 <td>{$pm10}</td>
@@ -38,6 +36,8 @@
                 <td><span class="main-showBtn" data-id="{$id}">[详细]</span></td>
             </tr>
         </tbody>
+        <!--two-->
+        <tbody></tbody>
     </table>
 
     
@@ -169,12 +169,48 @@
             };
         };
 
+        // 排序
+        var sortable = function(oTable, oTbody) {
+            var th = oTable.getElementsByTagName("th"),
+                rows = oTbody.getElementsByTagName("tr"),
+                flag = false, cell1, cell2, val1, val2;
+            rows = Array.prototype.slice.call(rows, 0);     //真实数组中的快照
 
-        // getHtmlMain(70~150): 将html声明在dom中
+            for(var i = 0, len = th.length - 1; i < len; i++){
+                (function(n){
+                    th[n].onclick=function(){
+                        //基于第n个<td>元素的值对行排序
+                        rows.sort(function(row1, row2){
+                            cell1 = row1.getElementsByTagName("td")[n];     //获得第n个单元格
+                            cell2 = row2.getElementsByTagName("td")[n];
+                            val1 = cell1.textContent || cell1.innerText;    //获得文本内容
+                            val2 = cell2.textContent || cell2.innerText;
+
+                            if (val1 < val2) return -1;
+                            if (val1 > val2) return 1;
+                            return 0;
+                        });
+
+                        flag && rows.reverse();
+
+                        //在tbody中按它们的顺序把行添加到最后
+                        //这将自动把它们从当前位置移走，故没必要预先删除它们
+                        //如果<tbody>还包含了除了<tr>的任何其他元素，这些节点将会悬浮到顶部位置
+                        for(var i = 0, len = rows.length; i < len; i++){
+                            oTbody.appendChild(rows[i]);
+                        }
+                        flag = !flag;
+                    }
+                }(i));
+            }
+        };
+
+        // getHtmlMain(50~70): 将html声明在dom中
         var getHtmlMain = function (data) {
-            console.time("getHtmlMain封装函数拼接时间(70~150)");
+            console.time("getHtmlMain拼接时间(50~70)");
 
-            var oTbody = document.getElementById("tbodyMain"),
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[0],
                 json = null,
                 htmlObj = {},
                 htmlArr = [],
@@ -196,31 +232,40 @@
             }
             oTbody.innerHTML = htmlArr.join("");
             oTbody.removeAttribute("style");
-            console.timeEnd("getHtmlMain封装函数拼接时间(70~150)");
+
+            console.timeEnd("getHtmlMain拼接时间(50~70)");
+
+            setTimeout(function () {
+                // 调用排序
+                sortable(oTable, oTbody);
+            }, 50);
         };
 
         // 拼接时间（35~55）：replace(regex , value)
         var getHtmlOne = function (data) {
+
             console.time("getHtmlOne拼接时间（35~55）");
-            var json = null, htmlArray = [],
-                oTbody = document.getElementById("tbody"),
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
+                json = null,
+                htmlArr = [],
                 html = "<tr class='list__click'>"
-                        + "<td>{id}</td>"
-                        + "<td>{pm10}</td>"
-                        + "<td>{pm25}</td>"
-                        + "<td>{so2}</td>"
-                        + "<td><span class='main-showBtn' data-id='{id}'>[详细]</span></td>"
-                        + "</tr>";
+                    + "<td>{id}</td>"
+                    + "<td>{pm10}</td>"
+                    + "<td>{pm25}</td>"
+                    + "<td>{so2}</td>"
+                    + "<td><span class='main-showBtn' data-id='{id}'>[详细]</span></td>"
+                    + "</tr>";
 
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
-                htmlArray[a] = html.replace(/{id}/g, filterModule().empty(json.id))
+                htmlArr[a] = html.replace(/{id}/g, filterModule().empty(json.id))
                     .replace("{pm10}", filterModule().empty(json.pm10))
                     .replace("{pm25}", filterModule().empty(json.pm25))
                     .replace("{so2}", filterModule().empty(json.so2));
             }
-            oTbody.innerHTML = htmlArray.join("");
+            oTbody.innerHTML = htmlArr.join("");
             console.timeEnd("getHtmlOne拼接时间（35~55）");
         };
 
@@ -228,8 +273,11 @@
         var getHtmlTwo = function (data) {
             console.time("getHtmlTwo拼接时间（40~55）");
 
-            var json = null, htmlArray = [], mapObj,
-                oTbody = document.getElementById("tbody"),
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
+                json = null,
+                htmlObj = {},
+                htmlArr = [],
                 html = "<tr class='list__click'>"
                     + "<td>{$id}</td>"
                     + "<td>{$pm10}</td>"
@@ -241,27 +289,28 @@
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
-                mapObj = {
+                htmlObj = {
                     "{$id}": filterModule().empty(json.id),
                     "{$pm10}": filterModule().empty(json.pm10),
                     "{$pm25}": filterModule().empty(json.pm25),
                     "{$so2}": filterModule().empty(json.so2)
                 };
 
-                htmlArray[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
-                    return mapObj[matched];
+                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
+                    return htmlObj[matched];
                 });
             }
-            oTbody.innerHTML = htmlArray.join("");
+            oTbody.innerHTML = htmlArr.join("");
+
             console.timeEnd("getHtmlTwo拼接时间（40~55）");
         };
 
         //拼接时间(40~60): 封装replaceAll()
         var getHtmlTwoPackage = function (data) {
-            console.time("getHtmlTwo封装函数拼接时间(98~110)");
+            console.time("getHtmlTwoPackage封装函数拼接时间(40~60)");
 
             // replace函数封装
-            //var regex =/\{(\d+)\}/g;
+            // var regex =/\{(\d+)\}/g;
             function replaceAll(str, mapObj){
                 return str.replace(/{\$([^}]+)?}/g, function(matched){
                     return mapObj[matched];
@@ -269,8 +318,11 @@
             }
 
             // 主要
-            var json = null, htmlArray = [], obj,
-                oTbody = document.getElementById("tbody"),
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
+                json = null,
+                htmlObj = {},
+                htmlArr = [],
                 html = "<tr class='list__click'>"
                     + "<td>{$id}</td>"
                     + "<td>{$pm10}</td>"
@@ -282,25 +334,28 @@
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
-                obj = {
+                htmlObj = {
                     "{$id}": filterModule().empty(json.id),
                     "{$pm10}": filterModule().empty(json.pm10),
                     "{$pm25}": filterModule().empty(json.pm25),
                     "{$so2}": filterModule().empty(json.so2)
                 };
-                htmlArray[a] = replaceAll(html, obj);
+                htmlArr[a] = replaceAll(html, htmlObj);
             }
-            oTbody.innerHTML = htmlArray.join("");
-            console.timeEnd("getHtmlTwo封装函数拼接时间(40~60)");
+            oTbody.innerHTML = htmlArr.join("");
+
+            console.timeEnd("getHtmlTwoPackage封装函数拼接时间(40~60)");
         };
 
-        //拼接时间(98~110): 通过split().join()
+        //拼接时间(75~110): 通过split().join()
         var getHtmlThree = function (data) {
-            console.time("getHtmlThree拼接时间(98~110)");
-            var oTbody = document.getElementById("tbody"),
+            console.time("getHtmlThree拼接时间(75~110)");
+
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
                 oTemp = document.getElementById("temp"),
                 json = null,
-                htmlArray = [],
+                htmlArr = [],
                 html;
 
             for (var a = 0, len = data.length; a < len; a++) {
@@ -312,18 +367,20 @@
                 html = html.split("{$so2}").join(filterModule().empty(json.so2));
                 html = html.split("{$id}").join(filterModule().empty(json.id));
 
-                htmlArray[a] = html;
+                htmlArr[a] = html;
             }
-            oTbody.innerHTML = htmlArray.join("");
-            console.timeEnd("getHtmlThree拼接时间(98~110)");
+            oTbody.innerHTML = htmlArr.join("");
+            console.timeEnd("getHtmlThree拼接时间(75~110)");
         };
 
         //拼接时间(55~65): 通过createElement() appendChild()
         var getHtmlFour = function (data) {
             console.time("getHtmlFour拼接时间(55~65)");
-            var oTbody = document.getElementById("tbody"),
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
                 json = null,
                 tr, td, b;
+
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
@@ -345,38 +402,30 @@
         // 拼接时间（35~55）：通过push()
         var getHtmlFive = function (data) {
             console.time("getHtmlOne拼接时间（35~55）");
-            var json = null, htmlArray = [],
-                oTbody = document.getElementById("tbody");
+
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
+                json = null,
+                htmlArr = [];
 
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
 
-                htmlArray.push("<tr class='list__click'>");
-                htmlArray.push("<td>"+ filterModule().empty(json.id) +"</td>");
-                htmlArray.push("<td>"+ filterModule().empty(json.pm10) +"</td>");
-                htmlArray.push("<td>"+ filterModule().empty(json.pm25) +"</td>");
-                htmlArray.push("<td>"+ filterModule().empty(json.so2) +"</td>");
-                htmlArray.push("<td><span class='main-showBtn' data-id='"+ filterModule().empty(json.id) +"'>[详细]</span></td>");
-                htmlArray.push("</tr>");
+                htmlArr.push("<tr class='list__click'>");
+                htmlArr.push("<td>"+ filterModule().empty(json.id) +"</td>");
+                htmlArr.push("<td>"+ filterModule().empty(json.pm10) +"</td>");
+                htmlArr.push("<td>"+ filterModule().empty(json.pm25) +"</td>");
+                htmlArr.push("<td>"+ filterModule().empty(json.so2) +"</td>");
+                htmlArr.push("<td><span class='main-showBtn' data-id='"+ filterModule().empty(json.id) +"'>[详细]</span></td>");
+                htmlArr.push("</tr>");
             }
-            oTbody.innerHTML = htmlArray.join("");
+            oTbody.innerHTML = htmlArr.join("");
             console.timeEnd("getHtmlOne拼接时间（35~55）");
         };
 
         // 拼接时间（45~60）：通过传参的方式赋值
         var getHtmlSix = function (data) {
             console.time("getHtmlSix封装函数拼接时间(45~60)");
-
-            var htmlArray = [], json = null,
-                oTbody = document.getElementById("tbody");
-
-            var html = "<tr class='list__click'>"
-                + "<td>{0}</td>"
-                + "<td>{1}</td>"
-                + "<td>{2}</td>"
-                + "<td>{3}</td>"
-                + "<td><span class='main-showBtn' data-id='{0}'>[详细]</span></td>"
-                + "</tr>";
 
             function stringFormat(str){
                 var params = [].slice.call(arguments,1);    //第一个参数，即html
@@ -388,16 +437,28 @@
                 return str;
             }
 
+            var oTable = document.getElementById("table"),
+                oTbody = oTable.getElementsByTagName("tbody")[1],
+                json = null,
+                htmlArr = [],
+                html = "<tr class='list__click'>"
+                    + "<td>{0}</td>"
+                    + "<td>{1}</td>"
+                    + "<td>{2}</td>"
+                    + "<td>{3}</td>"
+                    + "<td><span class='main-showBtn' data-id='{0}'>[详细]</span></td>"
+                    + "</tr>";
+
             for (var a = 0, len = data.length; a < len; a++) {
                 json = data[a];
-                htmlArray[a] = stringFormat(html, filterModule().empty(json.id)
+                htmlArr[a] = stringFormat(html, filterModule().empty(json.id)
                     ,filterModule().empty(json.pm10)
                     ,filterModule().empty(json.pm25)
                     ,filterModule().empty(json.so2)
                 );
             }
+            oTbody.innerHTML = htmlArr.join("");
 
-            oTbody.innerHTML = htmlArray.join("");
             console.timeEnd("getHtmlSix封装函数拼接时间(45~60)");
         };
 
@@ -432,6 +493,8 @@
                         //getHtmlFour(list);
                         // OR
                         //getHtmlFive(list);
+                        // OR
+                        //getHtmlSix(list)
                     }else{
                         return false;
                     }
