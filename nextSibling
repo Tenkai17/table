@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>菜鸟教程(runoob.com)</title>
+</head>
+<body>
+
+<div id="1" style="border:1px solid red;height:100px;width:100px">123</div>
+<div id="2" style="border:1px solid red;height:100px;width:100px">456</div>
+<input type="text" />
+<button>增加</button>
+	<script>
+		var div=document.getElementById("2");
+		var ndiv=document.createElement("div");
+		ndiv.innerHTML="new Div";
+		if(div.nextSibling){
+		div.parentNode.insertBefore(ndiv,div.nextSibling);
+		}else{
+		div.parentNode.appendChild(ndiv);
+		}
+	</script>
+
+</body>
+</html>
