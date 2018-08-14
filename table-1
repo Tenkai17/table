@@ -1,0 +1,51 @@
+var setHtml = function (dataJson) {
+        var json = null,
+            oTable = document.getElementById(overall + "table"),
+            oTbody = oTable.getElementsByTagName("tbody")[0],
+            nodeObj = {},
+            htmlArr = [],
+            html = '<tr class="row">'
+                +'<td class='+ overall+"serial" +'></td>'
+                +'<td>{{site}}</td>'
+                +'<td>{{siteName}}</td>'
+                +'<td>{{date}}</td>'
+                +'<td>{{o3}}</td>'
+                +'<td>{{no2}}</td>'
+                +'<td>{{co}}</td>'
+                +'<td>{{so2}}</td>'
+                +'<td>{{nox}}</td>'
+                +'<td>{{h2s}}</td>'
+                +'<td>{{co2}}</td>'
+                +'<td>{{voc}}</td>'
+                +'<td>{{pm25}}</td>'
+                +'<td>{{pm10}}</td>'
+                +'<td>{{humidity}}</td>'
+                +'<td>{{ambientTemperature}}</td>'
+                +'</tr>';
+
+        for (var a = 0, len = dataJson.length; a < len; a++) {
+            json = dataJson[a];
+
+            nodeObj = {
+                "site": filterModule.empty(json.tsNo),
+                "siteName": filterModule.empty(json.name),
+                "date": dateModule.getTime(filterModule.empty(json.collectionDate)),
+                "o3": filterModule.empty(json.o3),
+                "no2": filterModule.empty(json.no2),
+                "co": filterModule.empty(json.co),
+                "so2": filterModule.empty(json.so2),
+                "nox": filterModule.empty("--"),
+                "h2s": filterModule.empty("--"),
+                "co2": filterModule.empty("--"),
+                "voc": filterModule.empty("--"),
+                "pm25": filterModule.empty(json.pm25),
+                "pm10": filterModule.empty(json.pm10),
+                "humidity": filterModule.empty(json.humidity),
+                "ambientTemperature": filterModule.empty(json.temperature)
+            };
+            htmlArr[a] = html.replace(/{{([^}]+)?}}/g, function(matched, key){
+                return nodeObj[key];
+            });
+        }
+        oTbody.innerHTML = htmlArr.join("");
+    };
