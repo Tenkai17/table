@@ -1,0 +1,144 @@
+// 需求：获取请求文件中的部分html;
+
+define(['module/ajax'], function (ajaxModule) {
+
+    //window.onload = function () {
+    if(!sessionStorage.getItem("sXML")){
+        ajaxModule.data({
+            method: "GET",
+            url: "/skin/tempHtml.xml",
+            success: function (data) {
+                console.log("执行(顺序)：ajax文件请求");
+                return sessionStorage.setItem("sXML", data);    // 将数据存储到sessionStorage中，避免重复请求文件
+            }
+        });
+    }
+    //};
+
+
+
+    // 获取部分html  --  第一种方法
+    var xmlDoc = function () {
+        var data = sessionStorage.getItem("sXML");  // 获取保存在sessionStorage里的字符串
+        // 加载并解析一个 XML 字符串
+        var xmlDoc, parser;
+        if (window.DOMParser) {
+            parser = new DOMParser();
+            xmlDoc = parser.parseFromString(data, "text/xml");
+        }else{
+            xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async = false;
+            xmlDoc.loadXML(data);
+        }
+        console.log("执行(顺序)：解析 XML 字符串");
+        return xmlDoc;  // 方便调用时进行临时存储，避免使用回调函数重复调用
+    };
+
+    // -- 调用：获取部分html
+    // var ss = xmlModule.xmlDoc();
+    // console.log(ss.getElementById("xml-add").innerHTML)
+
+
+
+    // 获取部分html  --  第二种方法：推荐
+    var tempDiv = function () {
+        var tempDiv = document.createElement("DIV");
+        tempDiv.innerHTML = sessionStorage.getItem("sXML");
+
+        return tempDiv;
+    };
+
+    // -- 调用
+    // var tempDiv = xmlModule.tempDiv();
+    // console.log(tempDiv.querySelector("#xml-add").innerHTML)
+
+
+
+
+
+
+
+
+
+
+    //=============其他尝试==============//
+
+    var binding = function (fn) {
+        function getData(fn) {
+            ajaxModule.data({
+                method: "GET",
+                url: "/skin/tempHtml.xml",
+                success: function (data) {
+                    sessionStorage.setItem("sXML", data);
+                    return xmlDoc(sessionStorage.getItem("sXML"), fn);
+                }
+            });
+        }
+
+        function xmlDoc(data, fn) {
+            var xmlDoc, parser;
+            if (window.DOMParser) {
+                parser = new DOMParser();
+                xmlDoc = parser.parseFromString(data, "text/xml");
+            }else{
+                xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+                xmlDoc.async = false;
+                xmlDoc.loadXML(data);
+            }
+
+            fn && fn(xmlDoc);
+        }
+
+        var data = sessionStorage.getItem("sXML");
+        if(data) return xmlDoc(data, fn);
+        else return getData(fn);
+    };
+
+    // 同步解析 XML 文档
+    var xhr = function () {
+        var xmlhttp, xmlDoc;
+        if(window.XMLHttpRequest){
+            xmlhttp = new XMLHttpRequest();
+        }else{
+            xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
+        }
+        //发送请求
+        xmlhttp.open("GET", "/skin/tempHtml.xml", false);
+        xmlhttp.send();
+        //同步接受响应
+        if(xmlhttp.readyState === 4){
+            if(xmlhttp.status === 200){
+                //实际操作
+                xmlDoc = xmlhttp.responseXML;
+                return xmlDoc;
+            }
+        }
+    };
+
+    // 异步解析 XML 文档
+    var asyncXHR = function () {
+        var xmlhttp, xmlDoc;
+        if(window.XMLHttpRequest){
+            xmlhttp = new XMLHttpRequest();
+        }else{
+            xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
+        }
+        //异步接受响应
+        xmlhttp.onreadystatechange = function(){
+            if(xmlhttp.readyState === 4){
+                if(xmlhttp.status === 200){
+                    //实际操作
+                    xmlDoc = xmlhttp.responseXML;
+                }
+            }
+        };
+        //发送请求
+        xmlhttp.open("GET", "/skin/tempHtml.xml", true);    // true 为异步
+        xmlhttp.send();
+    };
+
+    return{
+        xmlDoc: xmlDoc,
+        tempDiv: tempDiv
+    }
+});
