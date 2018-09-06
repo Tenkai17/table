@@ -226,8 +226,8 @@
                     "so2": filterModule().empty(json.so2)
                 };
 
-                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(key){
-                    //console.log(matched)
+                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched, key){
+                    console.log(matched)
                     console.log(key)
                     return htmlObj[key];
                 });
