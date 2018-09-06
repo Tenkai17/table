@@ -220,13 +220,15 @@
                 json = data[a];
 
                 htmlObj = {
-                    "{$id}": filterModule().empty(json.id),
-                    "{$pm10}": filterModule().empty(json.pm10),
-                    "{$pm25}": filterModule().empty(json.pm25),
-                    "{$so2}": filterModule().empty(json.so2)
+                    "id": filterModule().empty(json.id),
+                    "pm10": filterModule().empty(json.pm10),
+                    "pm25": filterModule().empty(json.pm25),
+                    "so2": filterModule().empty(json.so2)
                 };
 
-                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched){
+                htmlArr[a] = html.replace(/{\$([^}]+)?}/g, function(matched, key){
+                    console.log(matched)
+                    console.log(key)
                     return htmlObj[matched];
                 });
             }
